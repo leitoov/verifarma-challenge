@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html:focus-within {
+    scroll-behavior: smooth;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-offset-2 ring-primary-500 ring-offset-background;
+  }
+}
+
+@layer components {
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-3 focus:py-2 focus:bg-yellow-300 focus:text-black focus:rounded;
+  }
+}
+
+@layer utilities {
+  .content-container {
+    @apply max-w-5xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Estilos para Google Material Symbols (iconos) */
+.material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
