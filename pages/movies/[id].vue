@@ -84,7 +84,7 @@ useHead(() => ({
         
         <!-- Valoraciones adicionales si las hay -->
         <details v-if="movie.Ratings?.length" class="mt-3">
-          <summary class="cursor-pointer">Ratings</summary>
+          <summary class="cursor-pointer">Reseñas</summary>
           <ul class="list-disc ml-6">
             <li v-for="r in movie.Ratings" :key="r.Source">{{ r.Source }} — {{ r.Value }}</li>
           </ul>
