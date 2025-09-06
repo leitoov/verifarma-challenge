@@ -10,7 +10,7 @@ function onLogout() {
 
 <template>
   <header class="border-b border-white/10">
-    <div class="md:container md:mx-auto flex items-center gap-4 py-3">
+    <div class="md:container md:mx-auto flex items-center gap-4 py-3 px-4 md:px-0">
       <!-- Utilizamos NuxtLink para navegar a la pagina principal -->
       <NuxtLink to="/movies" class="font-semibold tracking-wide flex items-center gap-2">
         <img
