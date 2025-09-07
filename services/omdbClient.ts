@@ -1,7 +1,7 @@
 import type { OmdbSearchResponse, MovieDetail } from '@/types/movies' // Importamos los tipos de datos
 
 // Funcion para construir la URL con los parametros necesarios
-const makeUrl = (base: string, key: string, params: Record<string, string>) => { //makeUrl necesita base, key y params
+export const makeUrl = (base: string, key: string, params: Record<string, string>) => { //makeUrl necesita base, key y params
   const u = new URL(base) // Creamos una nueva URL con la base
   u.searchParams.set('apikey', key) // Añadimos el apikey a los parametros de busqueda
   Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v)) // Añadimos los demas parametros
