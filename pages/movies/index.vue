@@ -1,51 +1,62 @@
-﻿<script setup lang="ts">
-import { useOmdbClient } from '@/services/omdbClient' // Servicio para consumir la API de OMDB
-import type { MovieSummary } from '@/types/movies' // Tipo para las peliculas
+<script setup lang="ts">
+import { useOmdbClient } from '@/services/omdbClient'
+import type { MovieSummary } from '@/types/movies'
 
-const { searchByTitle } = useOmdbClient() // Extraemos la funcion para buscar por titulo
+const route = useRoute()
+const router = useRouter()
+const { searchByTitle } = useOmdbClient()
 
-// Estado de busqueda
-const loading = ref(false)
-const error = ref<string | null>(null)
-const results = ref<MovieSummary[]>([]) //Tipamos el array de resultados
-const hasSearched = ref(false) //Parametro para identificar si es primera busqueda o no
-const q = ref('')
+// Query y pagina desde la URL (para permitir paginacion SSR)
+const q = ref<string>(String(route.query.q || ''))
+const page = computed(() => {
+  const p = Number(route.query.page || 1)
+  return Number.isFinite(p) && p > 0 ? Math.floor(p) : 1
+})
+const hasSearched = computed(() => q.value.trim().length > 0)
 
-async function fetchNow() {
+// Buscar al enviar: actualiza la URL y resuelve SSR/CSR
+function doSearch() {
   const term = q.value.trim()
   if (!term) return
-
-  loading.value = true
-  error.value = null
-  results.value = []
-
-  try {
-    //Realizamos la busqueda
-    const r = await searchByTitle(term, 1)
-    //Si hay resultados los asignamos a results
-    results.value = (r.Response === 'True' && r.Search) ? r.Search : []
-  } catch (err: any) {
-    //si hay error lo asignamos a error
-    error.value = err?.message || 'Error en la busqueda'
-  } finally {
-    // si finalizo la busqueda se indica que ya se hizo una busqueda
-    hasSearched.value = true
-    loading.value = false
-  }
+  router.push({ path: route.path, query: { q: term, page: 1 } })
 }
+
+type MoviesPage = { items: MovieSummary[]; total: number }
+
+// usamos useAsyncData con clave y watch sobre q y page
+const { data, pending: loading, error } = await useAsyncData<MoviesPage>(
+  () => `movies-${q.value}-${page.value}`,
+  async () => {
+    const term = q.value.trim()
+    if (!term) return { items: [], total: 0 } // sin terminos no hay busqueda
+    const r = await searchByTitle(term, page.value) // buscamos por el termino y pagina actual
+    if (r.Response === 'True' && r.Search) {
+      const total = Number(r.totalResults || 0) || 0
+      return { items: r.Search, total }
+    }
+    // Sin resultados no es error: devolvemos vacio
+    return { items: [], total: 0 }
+  },
+  { watch: [q, page] },
+)
+
+const results = computed(() => data.value?.items ?? [])
+const total = computed(() => data.value?.total ?? 0) // total de resultados
+const pageSize = 10
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize))) // al menos 1 pagina
 </script>
 
 <template>
   <section>
     <h1 class="text-2xl font-semibold mb-3">Peliculas</h1>
-    <!-- ejecutamos fetchNow para realizar la busqueda -->
-    <form @submit.prevent="fetchNow" class="flex gap-2 items-end pb-6" aria-label="Buscar peliculas">
+    <!-- Actualiza la URL (q y page) y dispara la carga SSR/CSR -->
+    <form @submit.prevent="doSearch" class="flex gap-2 items-end pb-6" aria-label="Buscar peliculas">
       <div class="flex-1">
         <BaseInput
           id="q"
           v-model="q"
-          label="Buscá en nuestro catálogo"
-          placeholder="Buscar por título"
+          label="Busca en nuestro catalogo"
+          placeholder="Buscar por titulo"
         />
       </div>
       <BaseButton type="submit">
@@ -55,12 +66,12 @@ async function fetchNow() {
 
     <p v-if="loading" class="mt-4" aria-live="polite">Cargando...</p>
 
-    <p v-else-if="error" class="mt-4 text-red-400" aria-live="polite">{{ error }}</p>
+    <p v-else-if="error" class="mt-4 text-red-400" aria-live="polite">{{ (error as any)?.message || error }}</p>
 
     <!-- Al menos una busqueda sin resultado -->
-    <div v-if="hasSearched && results.length === 0" class="mt-6 p-6 rounded border border-white/10 bg-white/5">
+    <div v-if="hasSearched && !loading && results.length === 0" class="mt-6 p-6 rounded border border-white/10 bg-white/5">
       <h2 class="font-semibold mb-1">No encontramos coincidencias</h2>
-      <p class="text-white/80 text-sm">Proba con otro titulo.</p>
+      <p class="text-white/80 text-sm">Prueba con otro titulo.</p>
     </div>
 
     <!-- componente de recomendados (sin busqueda inicial o sin resultado) -->
@@ -76,5 +87,22 @@ async function fetchNow() {
     <ul v-if="results.length > 0" class="grid gap-3 sm:grid-cols-2 md:grid-cols-4 mt-4">
       <MovieCard v-for="m in results" :key="m.imdbID" :movie="m" />
     </ul>
+
+    <!-- Paginacion -->
+    <nav v-if="hasSearched && totalPages > 1" class="mt-6 flex items-center gap-2">
+      <NuxtLink
+        :to="{ path: route.path, query: { q, page: Math.max(1, page - 1) } }"
+        class="px-3 py-1 rounded bg-white/10 hover:bg-white/20"
+        :aria-disabled="page <= 1"
+      >Anterior</NuxtLink>
+      <span class="opacity-70 text-sm">Pagina {{ page }} de {{ totalPages }}</span>
+      <!-- limitar pagina al total de paginas -->
+      <NuxtLink
+        :to="{ path: route.path, query: { q, page: Math.min(totalPages, page + 1) } }"
+        class="px-3 py-1 rounded bg-white/10 hover:bg-white/20"
+        :aria-disabled="page >= totalPages"
+      >Siguiente</NuxtLink>
+    </nav>
   </section>
-</template>
+  </template>
+
