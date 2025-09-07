@@ -92,7 +92,9 @@ La app queda disponible en `http://localhost:3000`.
 - Guard global: `middleware/auth.global.ts` (redirige según autenticación; la Home `/` es pública, el resto se protege).
 
 ---
-
+## PROTOTIPO MOBILE Y DESKTOP FIGMA
+https://www.figma.com/design/4YJ5UPUXKgXt4dnmpPbnvw/Challenge-Verifarma?node-id=0-1&t=WuVZLIeqwcAkRVmm-1
+---
 ## UI y estilos
 
 - Tailwind CSS: configuración en `tailwind.config.ts`, `postcss.config.cjs` y estilos globales en `assets/css/tailwind.css`.
