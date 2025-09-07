@@ -17,33 +17,25 @@ const props = withDefaults(defineProps<{
 
 const { searchByTitle } = useOmdbClient() // Extraemos la funcion para buscar por titulo
 
-const loading = ref(false)
-const error = ref<string | null>(null)
-const items = ref<MovieSummary[]>([])
-
-// Cargamos las sugerencias al montar el componente
-onMounted(async () => {
-  loading.value = true
-  error.value = null
-  try {
-    //Realizamos la busqueda por titulo y limitamos los resultados y filtramos con poster
-    const r = await searchByTitle(props.query, 1)
-    items.value = (r.Response === 'True' && r.Search)
-      ? r.Search.filter(m => m.Poster && m.Poster !== 'N/A').slice(0, props.limit)
+ // Usamos useAsyncData para cargar datos de manera asyncrona y manejar estados de carga y error
+const { data, pending: loading, error } = await useAsyncData<MovieSummary[]>(
+  () => `recommended-${props.query}-${props.limit}`,
+  async () => {
+    const r = await searchByTitle(props.query, 1) // buscamos por el termino definido en props.query
+    return (r.Response === 'True' && r.Search)
+      ? r.Search.filter(m => m.Poster && m.Poster !== 'N/A').slice(0, props.limit) // filtramos para solo incluir peliculas con poster y limitamos por props.limit
       : []
-  } catch (e: any) {
-    error.value = e?.message || 'Error cargando sugerencias'
-  } finally {
-    loading.value = false
-  }
-})
+  },
+)
+
+const items = computed(() => data.value || []) // utilizamos computed para manejar los items cargados
 </script>
 
 <template>
   <div>
     <h2 class="text-lg font-semibold mb-2">{{ props.title }}</h2>
     <p v-if="loading" aria-live="polite">Cargando sugerencias…</p>
-    <p v-else-if="error" class="text-red-400" aria-live="polite">{{ error }}</p>
+    <p v-else-if="error" class="text-red-400" aria-live="polite">{{ (error as any)?.message || error }}</p>
 
     <ul v-else class="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
       <!-- Mostramos las peliculas cargadas -->
@@ -51,4 +43,3 @@ onMounted(async () => {
     </ul>
   </div>
 </template>
-

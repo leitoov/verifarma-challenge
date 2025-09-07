@@ -6,39 +6,20 @@ const route = useRoute()
 
 const { getById } = useOmdbClient()  // Extraemos la funcion para buscar por ID
 
-const loading = ref(false)
-const error = ref<string | null>(null)
-const movie = ref<MovieDetail | null>(null) //Tipamos el detalle de pelicula
-
-// Funcion para cargar el detalle de la pelicula
-async function load() {
-  // Validamos que el ID venga en la ruta
-  const id = String(route.params.id || '')
-  if (!id) { error.value = 'Tuvimos problemas al cargar el detalle de tu pelicula.'; return } // si no hay id, error.
-  loading.value = true
-  error.value = null
-  movie.value = null
-  try {
-    // Hacemos la consulta por ID
+// usamos useAsyncData para cargar el detalle en servidor cuando sea posible
+const { data: movie, pending: loading, error } = await useAsyncData<MovieDetail | null>(
+  () => `movie-${String(route.params.id || '')}`,
+  async () => {
+    const id = String(route.params.id || '')
+    if (!id) throw new Error('Tuvimos problemas al cargar el detalle de tu pelicula.')
     const data = await getById(id)
-    // Si la respuesta es negativa, mostramos un error
     if ((data as any)?.Response === 'False') {
       throw new Error((data as any).Error || 'No encontrado')
     }
-    //si esta todo ok, asignamos el detalle a movie
-    movie.value = data
-  } catch (e: any) {
-    error.value = e?.message || 'No se pudo cargar el detalle'
-  } finally {
-    loading.value = false
-  }
-}
-
-// Cargamos al montar el componente
-onMounted(load)
-
-// El watch recarga si cambia el ID en la URL
-watch(() => route.params.id, () => load())
+    return data
+  },
+  { watch: [() => route.params.id] },
+)
 
 // Cambiamos el titulo de la pagina segun la pelicula cargada utilizando useHead
 useHead(() => ({
@@ -57,7 +38,7 @@ useHead(() => ({
     </div>
 
     <div v-if="loading" class="mt-6">Cargando…</div>
-    <div v-else-if="error" class="mt-6 text-red-400">{{ error }}</div>
+    <div v-else-if="error" class="mt-6 text-red-400">{{ (error as any)?.message || error }}</div>
 
     <!-- Mostramos el detalle si tenemos movie -->
     <article v-else-if="movie" class="mt-6 grid gap-6 md:grid-cols-[220px,1fr]">
