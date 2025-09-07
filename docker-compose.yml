@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  web:
+    build: .
+    image: verifarma-movies:latest
+    ports:
+      - "3000:3000"
+    environment:
+      # Public runtime config for Nuxt
+      API_URL: ${API_URL:-https://www.omdbapi.com}
+      OMDB_API_KEY: ${OMDB_API_KEY:-CHANGE_ME}
+    # If you want to mount the source for dev, uncomment below and run `npm run dev` in a custom command
+    # volumes:
+    #   - .:/app
+    # command: ["npm", "run", "dev"]
